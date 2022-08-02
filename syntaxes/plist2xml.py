@@ -31,9 +31,24 @@ def parse(plistPath):
 
     array = pp.Forward().setName('array')
     dictionary = pp.Forward().setName('dict')
-    string = (pp.QuotedString('"', escChar="\\", multiline=True, convertWhitespaceEscapes=True) |
-              pp.QuotedString("'", escQuote="''", multiline=True, convertWhitespaceEscapes=False) |
-              pp.Word(pp.alphanums+'_-'))('string').setName('simple string or quoted string')
+    string = (
+        (
+            pp.QuotedString(
+                '"',
+                escChar="\\",
+                multiline=True,
+                convertWhitespaceEscapes=True,
+            )
+            | pp.QuotedString(
+                "'",
+                escQuote="''",
+                multiline=True,
+                convertWhitespaceEscapes=False,
+            )
+            | pp.Word(f'{pp.alphanums}_-')
+        )
+    )('string').setName('simple string or quoted string')
+
 
     # order here is very important when using '-'
     element = pp.Group(string | array | dictionary)('value')
@@ -48,8 +63,7 @@ def parse(plistPath):
                            pp.ZeroOrMore(dict_item) -
                            RBRACE)('dict')
 
-    res = dictionary.parseFile(plistPath, parseAll=True)
-    return res
+    return dictionary.parseFile(plistPath, parseAll=True)
 
 
 def generate_xml(parent: ET.Element, data: pp.ParseResults, level=0, indent=4):
@@ -62,7 +76,6 @@ def generate_xml(parent: ET.Element, data: pp.ParseResults, level=0, indent=4):
             x_key.text = key
             value = dict_item['value']
             generate_xml(parent, value, level+1, indent)
-        pass
     elif 'array' in data:
         array = data['array']
         parent = ET.SubElement(parent, 'array')

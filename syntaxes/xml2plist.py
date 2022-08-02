@@ -17,32 +17,27 @@ def main(source, dest):
 def to_safe_string(text: str):
     if re.match(r'^[\w-]+$', text):
         return text
-    else:
-        text = text.replace("'", "''")  # escape single-quotes
-        return f"'{text}'"
+    text = text.replace("'", "''")  # escape single-quotes
+    return f"'{text}'"
 
 
 def format(tag, value: Union[list, str], level, indent, context):
-    xml_indent = 4
     indentation = ' '*indent*level
-    if context == 'mapping':
-        start_indent = ''
-    else:
-        start_indent = indentation
-
+    start_indent = '' if context == 'mapping' else indentation
     if type(value) is list:
-        if tag == 'dict':
-            start = '{'
-            end = '}'
-            joined_values = '\n'.join(value)
-        elif tag == 'array':
+        if tag == 'array':
             start = '('
             end = ')'
             joined_values = ',\n'.join(value)
+        elif tag == 'dict':
+            start = '{'
+            end = '}'
+            joined_values = '\n'.join(value)
         return f"{start_indent}{start}\n{joined_values}\n{indentation}{end}"
     else:
         reindented_lines = []
         lines = value.split('\n')
+        xml_indent = 4
         for line in lines:
             m: Match = re.match(r'^[\t ]*', line)
             # Normalize tabs to spaces
@@ -74,9 +69,11 @@ def convert_to_plist(element: ET.Element, level=0, indent=4, context: str = ''):
                 break
         return format(element.tag, dict_items, level, indent, context)
     elif element.tag == 'array':
-        array_items = []
-        for item_element in element:
-            array_items.append(convert_to_plist(item_element, level+1, indent))
+        array_items = [
+            convert_to_plist(item_element, level + 1, indent)
+            for item_element in element
+        ]
+
         return format(element.tag, array_items, level, indent, context)
     elif element.tag == 'string':
         return format(element.tag, to_safe_string(element.text), level, indent, context)
